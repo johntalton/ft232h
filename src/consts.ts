@@ -1,14 +1,14 @@
 
-const _MPSSE = {
-  BITMODE_RESET: 0x00, // bitbang OFF / regular serial/FIFO
-  BITMODE_BITBANG: 0x01, // async bitbang (classic)
-  BITMODE_MPSSE: 0x02, // MPSSE mode
-  BITMODE_SYNCBB: 0x04, // synchronous bitbang
-  BITMODE_MCU: 0x08, // MCU Host Bus Emulation
-  BITMODE_OPTO: 0x10, // Opto-Isolated Serial Interface Mode
-  BITMODE_CBUS: 0x20, // Bitbang on CBUS
-  BITMODE_SYNCFF: 0x40, // Single Channel Synchronous FIFO mode,
-  BITMODE_FT1284: 0x80, // FT1284
+const _MPSSE_BIT_MODE = {
+  RESET: 0x00, // bitbang OFF / regular serial/FIFO
+  BITBANG: 0x01, // async bitbang (classic)
+  MPSSE: 0x02, // MPSSE mode
+  SYNCBB: 0x04, // synchronous bitbang
+  MCU: 0x08, // MCU Host Bus Emulation
+  OPTO: 0x10, // Opto-Isolated Serial Interface Mode
+  CBUS: 0x20, // Bitbang on CBUS
+  SYNCFF: 0x40, // Single Channel Synchronous FIFO mode,
+  FT1284: 0x80, // FT1284
 }
 
 

@@ -76,8 +76,44 @@ export class FT232HCommon {
 		throw new Error('no impl')
 	}
 
-	static async pollModemStatus() {
-		throw new Error('no impl')
+	static async pollModemStatus(device: USBDevice) {
+
+		const SIO_POLL_MODEM_STATUS_REQUEST = 0x05
+
+		const length = 64
+		const result = await device.controlTransferIn({
+			requestType: 'vendor',
+			recipient: 'device',
+			request: SIO_POLL_MODEM_STATUS_REQUEST,
+			value: 0,
+			index: 0
+
+		}, length)
+
+		if(result.status !== 'ok') { }
+
+		console.log(result)
+
+		const usb_val0 = result.data.getUint8(0)
+		const usb_val1 = result.data.getUint8(1)
+
+		const status = {
+			CTS: isBitSet(usb_val0, 4),
+			DTS: isBitSet(usb_val0, 5),
+			RI: isBitSet(usb_val0, 6),
+			RLSD: isBitSet(usb_val0, 6),
+
+			DR: isBitSet(usb_val1, 0),
+			OE: isBitSet(usb_val1, 1),
+			PE: isBitSet(usb_val1, 2),
+			FE: isBitSet(usb_val1, 3),
+			BI: isBitSet(usb_val1, 4),
+			THRE: isBitSet(usb_val1, 5),
+			TEMT: isBitSet(usb_val1, 6),
+			ErrorRCVRFIFO: isBitSet(usb_val1, 7),
+		}
+
+		console.log('status', status)
 	}
 
 	static async setFlowControl() {
@@ -106,3 +142,5 @@ export class FT232HCommon {
 	}
 
 }
+
+export class FT232H {}

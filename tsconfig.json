@@ -7,7 +7,7 @@
 
       "target": "ESNext",
       "module": "ESNext",
-      "lib": ["ESNext"],
+      "lib": ["ESNext", "DOM"],
       "esModuleInterop": true,
       "isolatedModules": false,
       "moduleResolution": "node",
