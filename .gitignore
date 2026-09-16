@@ -1,4 +1,7 @@
 node_modules/
 lib/
 coverage/
+
+.DS_Store
 package-lock.json
+tsconfig.tsbuildinfo

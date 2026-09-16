@@ -1,51 +1,55 @@
 {
     "compilerOptions": {
-      "alwaysStrict": true,
+        "alwaysStrict": true,
 
-      "incremental": true,
-      "watch": false,
+        "incremental": true,
+        "target": "ESNext",
+        "module": "nodenext",
+        "lib": [
+            "ESNext",
+            "DOM"
+        ],
+        "moduleResolution": "nodenext",
+        "esModuleInterop": true,
+        "isolatedModules": false,
 
-      "target": "ESNext",
-      "module": "ESNext",
-      "lib": ["ESNext", "DOM"],
-      "esModuleInterop": true,
-      "isolatedModules": false,
-      "moduleResolution": "node",
+        "strict": true,
 
-      "strict": true,
+        "noEmitOnError": false,
+        "noUnusedParameters": true,
+        "noUnusedLocals": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "allowUnreachableCode": false,
+        "exactOptionalPropertyTypes": true,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+        "noImplicitOverride": true,
+        "noPropertyAccessFromIndexSignature": true,
+        "noUncheckedIndexedAccess": true,
 
-      "noEmitOnError": false,
-      "noUnusedParameters": true,
-      "noUnusedLocals": true,
+        "allowJs": false,
 
-      "noImplicitAny": true,
-      "strictNullChecks": true,
-      "noImplicitReturns": true,
-      "noFallthroughCasesInSwitch": true,
-      "forceConsistentCasingInFileNames": true,
-      "allowJs": false,
+        "removeComments": false,
+        "preserveConstEnums": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
 
-      "removeComments": false,
-      "preserveConstEnums": true,
+        "declaration": true,
+        "declarationMap": true,
+        "diagnostics": true,
+        "pretty": true,
+        "sourceMap": true,
 
-      "experimentalDecorators": true,
-      "emitDecoratorMetadata": true,
-
-
-      "declaration": true,
-      "declarationMap": true,
-      "diagnostics": true,
-      "pretty": true,
-      "sourceMap": true,
-
-      "outDir": "./lib"
-
+        "rootDir": "./src",
+        "outDir": "./lib"
     },
     "compileOnSave": true,
     "include": [
-        "./src/**/*.ts"
+        "src/**/*.ts"
     ],
     "exclude": [
         "./node_modules/**"
     ]
-  }
+}
