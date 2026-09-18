@@ -2,6 +2,10 @@
     "compilerOptions": {
         "alwaysStrict": true,
 
+        "types": ["w3c-web-usb"],
+        "allowImportingTsExtensions": true,
+        "rewriteRelativeImportExtensions": true,
+
         "incremental": true,
         "target": "ESNext",
         "module": "nodenext",

@@ -1,6 +1,7 @@
 node_modules/
 lib/
 coverage/
+.vscode/
 
 .DS_Store
 package-lock.json
