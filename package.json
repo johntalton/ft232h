@@ -1,6 +1,6 @@
 {
   "name": "@johntalton/ft232h",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "license": "MIT",
   "exports": {
@@ -15,7 +15,7 @@
     "src/**/*.ts"
   ],
   "repository": {
-    "url": "https://github.com/johntalton/ft232h"
+    "url": "git+https://github.com/johntalton/ft232h.git"
   },
   "scripts": {
     "build": "tsc -p .",
