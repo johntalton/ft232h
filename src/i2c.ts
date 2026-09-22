@@ -1,8 +1,7 @@
-/** biome-ignore-all lint/nursery/useThisInClassMethods: <explanation> */
+
 /** biome-ignore-all lint/style/noExcessiveLinesPerFile: <explanation> */
 /** biome-ignore-all lint/style/useConsistentArrayType: <explanation> */
 /** biome-ignore-all lint/performance/noAwaitInLoops: <explanation> */
-/** biome-ignore-all lint/style/useExportsLast: <explanation> */
 import type {
 	I2CAddress,
 	I2CBufferSource,
@@ -20,12 +19,7 @@ import {
 	PIN_STATE_COMMANDS
 } from './consts.ts'
 import type { FT232H } from './ft232h.ts'
-// import { DeviceStatus } from './status.ts'
-
-
-
-
-
+import { range } from './range.ts'
 
 const SDA_PIN_MASK = 0b0000_0010
 const SCL_PIN_MASK = 0b0000_0001
@@ -36,13 +30,8 @@ const SCL_LOW_SDA_HIGH: number = SDA_PIN_MASK
 const SCL_LOW_SDA_LOW = 0
 
 const SDA_DIRECTION_OUT = 0b0000_0010
-// const SDA_DIRECTION_IN = 0b0000_0000
 const SCL_DIRECTION_OUT = 0b0000_0001
-// const SCL_DIRECTION_IN = 0b0000_0000
-
 const SDA_SCL_DIRECTION_OUT: number = SDA_DIRECTION_OUT | SCL_DIRECTION_OUT
-
-
 
 export class FT232HI2C {
 	static initI2C(): Uint8Array<ArrayBuffer> {
@@ -179,7 +168,7 @@ export class FT232HI2C {
 	}
 }
 
-async function pollData(device: FT232H): Promise<Uint8Array<ArrayBuffer>> {
+export async function pollData(device: FT232H): Promise<Uint8Array<ArrayBuffer>> {
 	const MAX_POLL_ATTEMPTS = 10
 
 	for(let i = 0; i < MAX_POLL_ATTEMPTS; i+=1) {
@@ -197,7 +186,7 @@ async function pollData(device: FT232H): Promise<Uint8Array<ArrayBuffer>> {
 	throw new Error('no valid data acquired')
 }
 
-function checkAck(data: Uint8Array<ArrayBuffer>): boolean {
+export function checkAck(data: Uint8Array<ArrayBuffer>): boolean {
 	if(data.byteLength !== 1) { throw new Error('not just an ack') }
 	const [ byte ] = data
 	if(byte === undefined) { return false }
@@ -205,7 +194,7 @@ function checkAck(data: Uint8Array<ArrayBuffer>): boolean {
 	return  (byte & 0b0000_0001) === 0
 }
 
-async function sendAndReadACK(device: FT232H, transaction: Uint8Array<ArrayBuffer>): Promise<boolean> {
+export async function sendAndReadACK(device: FT232H, transaction: Uint8Array<ArrayBuffer>): Promise<boolean> {
 	await device.sendData(transaction)
 	const response = await pollData(device)
 	return checkAck(response)
@@ -213,7 +202,7 @@ async function sendAndReadACK(device: FT232H, transaction: Uint8Array<ArrayBuffe
 
 export class FT232HBus implements I2CBus {
 	readonly name = 'FT232H'
-	readonly supportsScan = false
+	readonly supportsScan = true
 	readonly supportsMultiByteDataAddress = false
 
 	readonly #device: FT232H
@@ -236,7 +225,18 @@ export class FT232HBus implements I2CBus {
 	}
 
 	async scan(): Promise<I2CAddress[]> {
-		throw new Error('Method not implemented.')
+		const result: Array<I2CAddress> = []
+
+		for(const addr of range(0x08, 0x77)) {
+			//
+			const startAck = await sendAndReadACK(this.#device, FT232HI2C.startWithAddress(addr, true))
+			console.log('start ack', startAck)
+			if(startAck) { result.push(addr) }
+
+			// todo reset or send stop?
+		}
+
+		return result
 	}
 
 	async sendByte(_address: I2CAddress, _byteValue: number): Promise<void> {
@@ -322,11 +322,62 @@ export class FT232HBus implements I2CBus {
 		}
 	}
 
-	async i2cRead(_address: I2CAddress, _length: number, _targetBuffer?: I2CBufferSource): Promise<I2CReadResult> {
-		throw new Error('Method not implemented.')
+	async i2cRead(address: I2CAddress, length: number, _targetBuffer?: I2CBufferSource): Promise<I2CReadResult> {
+		//
+		const startAck = await sendAndReadACK(this.#device, FT232HI2C.startWithAddress(address))
+		console.log('start ack', startAck)
+
+
+		const parts: Array<Uint8Array<ArrayBuffer>> = []
+		for(let i = 0; i < length; i += 1) {
+			//
+			const ack = i + 1 < length // is last byte
+
+			const readByteTransaction = FT232HI2C.readData(ack)
+			await this.#device.sendData(Uint8Array.from(readByteTransaction))
+			const byteReadResponse = await pollData(this.#device)
+			console.log('byte read', i, byteReadResponse)
+
+			parts.push(new Uint8Array(byteReadResponse.buffer, byteReadResponse.byteOffset, 1))
+		}
+
+		//
+		await this.#device.sendData(FT232HI2C.stop())
+
+		//
+		const blob = new Blob(parts)
+		const buffer = await blob.bytes()
+
+		return {
+			bytesRead: length,
+			buffer
+		}
 	}
 
-	async i2cWrite(_address: I2CAddress, _length: number, _buffer: I2CBufferSource): Promise<I2CWriteResult> {
-		throw new Error('Method not implemented.')
+	async i2cWrite(address: I2CAddress, length: number, buffer: I2CBufferSource): Promise<I2CWriteResult> {
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, length) :
+			new Uint8Array(buffer, 0, length)
+
+		//
+		const startAck = await sendAndReadACK(this.#device, FT232HI2C.startWithAddress(address, true))
+		console.log('start ack', startAck)
+
+		//
+		for(let i = 0; i < length; i += 1) {
+			const data = u8[i]
+			if(data === undefined) { throw new Error('data byte undefined') }
+
+			const writeAck = await sendAndReadACK(this.#device, FT232HI2C.writeByte(data))
+			console.log('write byte ack', writeAck)
+		}
+
+		//
+		await this.#device.sendData(FT232HI2C.stop())
+
+		return {
+			bytesWritten: length,
+			buffer
+		}
 	}
 }
