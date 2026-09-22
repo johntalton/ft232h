@@ -57,8 +57,20 @@ export class FT232HI2C {
 		])
 	}
 
+	static #consumeAck(): Array<number> {
+		return [
+			// release SDA
+			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
+			MSB_FIRST_CLOCK_COMMANDS.IN_BITS_POSITIVE_VE, 0x00,
+			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT, // regain
+		]
+	}
+
 	static #start(): Array<number> {
 		return [
+			// SDA: 1, SCL: 0
+			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
+
 			// SDA: 1, SCL: 1  (release both lines)
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
@@ -82,88 +94,49 @@ export class FT232HI2C {
 		]
 	}
 
-	static readBlock_Prefix(addr: number): Uint8Array<ArrayBuffer> {
-		const transaction = new Uint8Array([
+	static startWithAddress(addr: number, write = false): Uint8Array<ArrayBuffer> {
+		return Uint8Array.from([
 			...FT232HI2C.#start(),
 
 			// write 1 byte address
-			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, (addr << 1) | 0,
+			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, (addr << 1) | (write ? 0 : 1),
 
 			// consume ACK for address
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			MSB_FIRST_CLOCK_COMMANDS.IN_BITS_POSITIVE_VE, 0x00,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT, // regain
-		])
-
-		return transaction
-	}
-
-	static readBlock_Command(cmd: number): Array<number> {
-		return [
-			// write 1 byte command
-			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, cmd,
-
-			// // consume ACK for data (release SDA)
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			MSB_FIRST_CLOCK_COMMANDS.IN_BITS_POSITIVE_VE, 0x00,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT, // regain
+			...FT232HI2C.#consumeAck(),
 
 			HOST_AND_MPSSE_MODE_COMMANDS.SEND_IMMEDIATE
-		]
+		])
 	}
 
-	static #repeatStart(): Array<number> {
-		return [
-			// SDA: 1, SCL: 0
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
+	static writeByte(data: number): Uint8Array<ArrayBuffer> {
+		return Uint8Array.from([
+			// write 1 byte command
+			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, data,
 
-			// SDA: 1, SCL: 1
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
+			// consume ACK for data (release SDA)
+			...FT232HI2C.#consumeAck(),
 
-			// SDA: 0, SCL: 1
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-
-			// SDA: 0, SCL: 0  (both low - hold start)
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
-
-		]
+			HOST_AND_MPSSE_MODE_COMMANDS.SEND_IMMEDIATE
+		])
 	}
 
-	static readBlock_RepeatStart_Read(addr: number): Array<number> {
-		return [
-			...FT232HI2C.#repeatStart(),
+	static repeatStartWithAddress(addr: number, write = false): Uint8Array<ArrayBuffer> {
+		return Uint8Array.from([
+			...FT232HI2C.#start(),
 
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
 
 			// write 1 byte address
-			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, (addr << 1) | 1,
+			MSB_FIRST_CLOCK_COMMANDS.OUT_BYTES_NEGATIVE_VE, 0x00, 0x00, (addr << 1) | (write ? 0 : 1),
 
 			// consume ACK for address
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
-			MSB_FIRST_CLOCK_COMMANDS.IN_BITS_POSITIVE_VE, 0x00,
-			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT, // regain
+			...FT232HI2C.#consumeAck(),
 
 			HOST_AND_MPSSE_MODE_COMMANDS.SEND_IMMEDIATE
-		]
+		])
 	}
 
-	static readBlock_Byte(ack = true): Array<number> {
+	static readData(ack = true): Array<number> {
 		return [
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
 
@@ -175,16 +148,15 @@ export class FT232HI2C {
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
 			MSB_FIRST_CLOCK_COMMANDS.OUT_BITS_NEGATIVE_VE, 0x00, ack ? 0x00 : 0x80,
 
-
 			HOST_AND_MPSSE_MODE_COMMANDS.SEND_IMMEDIATE,
 
 			// PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_HIGH, SDA_SCL_DIRECTION_OUT
 		]
 	}
 
-	static readBlock_Stop(): Array<number> {
-		return [
-			//
+	static stop(): Uint8Array<ArrayBuffer> {
+		return Uint8Array.from([
+			// Set SDA low, SCL low
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_LOW_SDA_LOW, SDA_SCL_DIRECTION_OUT,
@@ -201,16 +173,16 @@ export class FT232HI2C {
 			// Set SDA, SCL high
 			PIN_STATE_COMMANDS.SET_DATA_BITS_LOW_BYTE, SCL_HIGH_SDA_HIGH, SDA_SCL_DIRECTION_OUT,
 
-
 			//
 			HOST_AND_MPSSE_MODE_COMMANDS.SEND_IMMEDIATE
-		]
+		])
 	}
-
 }
 
 async function pollData(device: FT232H): Promise<Uint8Array<ArrayBuffer>> {
-	for(let i = 0; i < 10; i+=1) {
+	const MAX_POLL_ATTEMPTS = 10
+
+	for(let i = 0; i < MAX_POLL_ATTEMPTS; i+=1) {
 		const response = await device.readData(64)
 		if(response.byteLength === 2) { continue }
 
@@ -231,6 +203,12 @@ function checkAck(data: Uint8Array<ArrayBuffer>): boolean {
 	if(byte === undefined) { return false }
 
 	return  (byte & 0b0000_0001) === 0
+}
+
+async function sendAndReadACK(device: FT232H, transaction: Uint8Array<ArrayBuffer>): Promise<boolean> {
+	await device.sendData(transaction)
+	const response = await pollData(device)
+	return checkAck(response)
 }
 
 export class FT232HBus implements I2CBus {
@@ -271,42 +249,33 @@ export class FT232HBus implements I2CBus {
 		if(Array.isArray(cmd)) { throw new Error('single command byte only') }
 
 		//
-		const prefixTransaction = FT232HI2C.readBlock_Prefix(address)
-		await this.#device.sendData(prefixTransaction)
-		const prefixResponse = await pollData(this.#device)
-		console.log('prefix ack', checkAck(prefixResponse))
+		const startAck = await sendAndReadACK(this.#device, FT232HI2C.startWithAddress(address, true))
+		console.log('start ack', startAck)
 
 		//
-		const commandTransaction = FT232HI2C.readBlock_Command(cmd)
-		await this.#device.sendData(Uint8Array.from(commandTransaction))
-		const commandResponse = await pollData(this.#device)
-		console.log('command ack', checkAck(commandResponse))
+		const commandAck = await sendAndReadACK(this.#device, FT232HI2C.writeByte(cmd))
+		console.log('command ack', commandAck)
 
 		//
-		const repeatStartAddressReadTransaction = FT232HI2C.readBlock_RepeatStart_Read(address)
-		await this.#device.sendData(Uint8Array.from(repeatStartAddressReadTransaction))
-		const repeatStartResponse = await pollData(this.#device)
-		console.log('repeat start ack', checkAck(repeatStartResponse))
+		const repeatStartAck = await sendAndReadACK(this.#device, FT232HI2C.repeatStartWithAddress(address))
+		console.log('repeat start ack', repeatStartAck)
 
 
 		const parts: Array<Uint8Array<ArrayBuffer>> = []
 		for(let i = 0; i < length; i += 1) {
 			//
-			const ack = i + 1 < length
+			const ack = i + 1 < length // is last byte
 
-			const readByteTransaction = FT232HI2C.readBlock_Byte(ack)
+			const readByteTransaction = FT232HI2C.readData(ack)
 			await this.#device.sendData(Uint8Array.from(readByteTransaction))
 			const byteReadResponse = await pollData(this.#device)
-
-			// two bytes read - first data second ack
 			console.log('byte read', i, byteReadResponse)
 
 			parts.push(new Uint8Array(byteReadResponse.buffer, byteReadResponse.byteOffset, 1))
 		}
 
 		//
-		const stopTransaction = FT232HI2C.readBlock_Stop()
-		await this.#device.sendData(Uint8Array.from(stopTransaction))
+		await this.#device.sendData(FT232HI2C.stop())
 
 		//
 		const blob = new Blob(parts)
@@ -318,8 +287,39 @@ export class FT232HBus implements I2CBus {
 		}
 	}
 
-	async writeI2cBlock(_address: I2CAddress, _cmd: I2CCommand, _length: number, _buffer: I2CBufferSource): Promise<I2CWriteResult> {
-		throw new Error('Method not implemented.')
+	async writeI2cBlock(address: I2CAddress, cmd: I2CCommand, length: number, buffer: I2CBufferSource): Promise<I2CWriteResult> {
+		console.log('writeI2CBlock', address, cmd, length, buffer)
+
+		if(Array.isArray(cmd)) { throw new Error('single command byte only') }
+
+		const u8 = ArrayBuffer.isView(buffer) ?
+			new Uint8Array(buffer.buffer, buffer.byteOffset, length) :
+			new Uint8Array(buffer, 0, length)
+
+		//
+		const startAck = await sendAndReadACK(this.#device, FT232HI2C.startWithAddress(address, true))
+		console.log('start ack', startAck)
+
+		//
+		const commandAck = await sendAndReadACK(this.#device, FT232HI2C.writeByte(cmd))
+		console.log('command ack', commandAck)
+
+		//
+		for(let i = 0; i < length; i += 1) {
+			const data = u8[i]
+			if(data === undefined) { throw new Error('data byte undefined') }
+
+			const writeAck = await sendAndReadACK(this.#device, FT232HI2C.writeByte(data))
+			console.log('write byte ack', writeAck)
+		}
+
+		//
+		await this.#device.sendData(FT232HI2C.stop())
+
+		return {
+			bytesWritten: length,
+			buffer
+		}
 	}
 
 	async i2cRead(_address: I2CAddress, _length: number, _targetBuffer?: I2CBufferSource): Promise<I2CReadResult> {
