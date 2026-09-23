@@ -1,5 +1,5 @@
 
-
+export const STATUS_PREFIX_LENGTH = 2
 
 export const MODEM_STATUS_CLEAR_TO_SEND = 0x10
 export const MODEM_STATUS_DATA_SET_READY = 0x20
@@ -45,8 +45,8 @@ export interface DeviceStatusInfo {
 export class DeviceStatus {
 	static parse(data: BufferSource): DeviceStatusInfo|undefined {
 		const u8 = ArrayBuffer.isView(data) ?
-			new Uint8Array(data.buffer, data.byteOffset, 2) :
-			new Uint16Array(data, 0, 2)
+			new Uint8Array(data.buffer, data.byteOffset, STATUS_PREFIX_LENGTH) :
+			new Uint16Array(data, 0, STATUS_PREFIX_LENGTH)
 
 		const [ modemStatus, lineStatus ] = u8
 
