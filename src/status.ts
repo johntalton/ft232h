@@ -7,26 +7,27 @@ export const MODEM_STATUS_RING_INDICATOR = 0x40
 export const MODEM_STATUS_DATA_CARRIER_DETECT = 0x80
 
 
-
-export const LINE_STATUS_OVERRUN_ERROR = 0x01
-export const LINE_STATUS_PARITY_ERROR = 0x02
-export const LINE_STATUS_FRAMING_ERROR = 0x04
-export const LINE_STATUS_BREAK_INTERRUPT = 0x08
-export const LINE_STATUS_TX_HOLDING_EMPTY = 0x10
-export const LINE_STATUS_TX_EMPTY = 0x20
-export const LINE_STATUS_RECEIVER_ERROR = 0x40
+export const LINE_STATUS_DATA_READY = 0x01
+export const LINE_STATUS_OVERRUN_ERROR = 0x02
+export const LINE_STATUS_PARITY_ERROR = 0x04
+export const LINE_STATUS_FRAMING_ERROR = 0x08
+export const LINE_STATUS_BREAK_INTERRUPT = 0x10
+export const LINE_STATUS_TX_HOLDING_EMPTY = 0x20
+export const LINE_STATUS_TX_EMPTY = 0x40
+export const LINE_STATUS_RECEIVER_ERROR = 0x80
 
 
 export interface DeviceModemStatus {
 	data: number
 	isClearToSend: boolean
-	isDataReady: boolean
+	isDataSetReady: boolean
 	isRing: boolean
 	isCarrierDetect: boolean
 }
 
 export interface DeviceLineStatus {
 	data: number
+	isDataReady: boolean
 	isOverrunError: boolean
 	isParityError: boolean
 	isFramingError: boolean
@@ -55,11 +56,12 @@ export class DeviceStatus {
 
 		//
 		const isClearToSend = (modemStatus & MODEM_STATUS_CLEAR_TO_SEND) !== 0
-		const isDataReady = (modemStatus & MODEM_STATUS_DATA_SET_READY) !== 0
+		const isDataSetReady = (modemStatus & MODEM_STATUS_DATA_SET_READY) !== 0
 		const isRing = (modemStatus & MODEM_STATUS_RING_INDICATOR) !== 0
 		const isCarrierDetect = (modemStatus & MODEM_STATUS_DATA_CARRIER_DETECT) !== 0
 
 		//
+		const isDataReady = (lineStatus & LINE_STATUS_DATA_READY) !== 0
 		const isOverrunError = (lineStatus & LINE_STATUS_OVERRUN_ERROR) !== 0
 		const isParityError = (lineStatus & LINE_STATUS_PARITY_ERROR) !== 0
 		const isFramingError = (lineStatus & LINE_STATUS_FRAMING_ERROR) !== 0
@@ -72,12 +74,13 @@ export class DeviceStatus {
 			modem: {
 				data: modemStatus,
 				isClearToSend,
-				isDataReady,
+				isDataSetReady,
 				isRing,
 				isCarrierDetect,
 			},
 			line: {
 				data: lineStatus,
+				isDataReady,
 				isOverrunError,
 				isParityError,
 				isFramingError,

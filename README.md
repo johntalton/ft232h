@@ -61,7 +61,7 @@ await ftDevice.sendData(Uint8Array.from([
 Using it as a I²C bus
 
 ```js
-import { FT232HBus } from '@johntalton/ft232h'
+import { FT232HBus } from '@johntalton/ft232h/i2c'
 import { I2CAddressedBus } from '@johntalton/and-other-delights'
 import { ADT7410 } from '@johntalton/adt7410'
 
@@ -83,3 +83,4 @@ const sensor = ADT7410.from(new I2CAddressedBus(DEFAULT_ADDR, bus))
 const { temperatureC } = await sensor.getTemperature()
 
 ```
+

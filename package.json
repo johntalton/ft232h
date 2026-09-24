@@ -4,8 +4,9 @@
   "type": "module",
   "license": "MIT",
   "exports": {
-    "import": "./lib/index.js",
-    "require": null
+    ".": "./lib/index.js",
+    "./i2c": "./lib/i2c/index.js",
+    "./mpsse": "./lib/mpsse/index.js"
   },
   "files": [
     "lib/**/*.js",
